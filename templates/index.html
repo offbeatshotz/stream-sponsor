@@ -19,6 +19,17 @@
     </nav>
 
     <div class="container">
+        {% if not env_exists %}
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="alert alert-warning">
+                    <strong>Setup Required:</strong> The <code>.env</code> file is missing. 
+                    Please copy <code>.env.example</code> to <code>.env</code> and add your API keys.
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         {% if error %}
         <div class="row mt-3">
             <div class="col-12">
@@ -29,6 +40,7 @@
             </div>
         </div>
         {% endif %}
+
         <div class="row mt-3">
             <div class="col-12 text-end">
                 <button class="btn btn-success" onclick="exportProfile()">Export Stream Profile</button>
@@ -45,6 +57,11 @@
                             <p>Status: <span class="badge bg-success">Connected</span></p>
                             <p>Stream Key: <span class="stream-key">{{ twitch_key or 'Hidden' }}</span></p>
                             <button class="btn btn-outline-primary btn-sm" onclick="copyKey('{{ twitch_key }}')">Copy Key</button>
+                        {% elif twitch_missing %}
+                            <div class="alert alert-sm alert-info py-2">
+                                <small>Missing: {{ twitch_missing|join(', ') }}</small>
+                            </div>
+                            <button class="btn btn-primary disabled" title="Add credentials to .env to enable">Login with Twitch</button>
                         {% else %}
                             <a href="/login/twitch" class="btn btn-primary">Login with Twitch</a>
                         {% endif %}
@@ -62,6 +79,11 @@
                             <p>Status: <span class="badge bg-success">Connected</span></p>
                             <p>Stream Key: <span class="stream-key">{{ youtube_key or 'Hidden' }}</span></p>
                             <button class="btn btn-outline-primary btn-sm" onclick="copyKey('{{ youtube_key }}')">Copy Key</button>
+                        {% elif youtube_missing %}
+                            <div class="alert alert-sm alert-info py-2">
+                                <small>Missing: {{ youtube_missing|join(', ') }}</small>
+                            </div>
+                            <button class="btn btn-danger disabled" title="Add credentials to .env to enable">Login with YouTube</button>
                         {% else %}
                             <a href="/login/youtube" class="btn btn-danger">Login with YouTube</a>
                         {% endif %}

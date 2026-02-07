@@ -29,22 +29,37 @@ YOUTUBE_REDIRECT_URI = os.getenv('YOUTUBE_REDIRECT_URI')
 TWITCH_SCOPES = 'channel:read:stream_key'
 YOUTUBE_SCOPES = ['https://www.googleapis.com/auth/youtube.readonly']
 
-def check_credentials(platform):
+def get_missing_credentials(platform):
+    missing = []
     if platform == 'twitch':
-        return TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET and not TWITCH_CLIENT_ID.startswith('your_')
-    if platform == 'youtube':
-        return YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET and not YOUTUBE_CLIENT_ID.startswith('your_')
-    return False
+        if not TWITCH_CLIENT_ID or TWITCH_CLIENT_ID.startswith('your_'): missing.append('TWITCH_CLIENT_ID')
+        if not TWITCH_CLIENT_SECRET or TWITCH_CLIENT_SECRET.startswith('your_'): missing.append('TWITCH_CLIENT_SECRET')
+        if not TWITCH_REDIRECT_URI: missing.append('TWITCH_REDIRECT_URI')
+    elif platform == 'youtube':
+        if not YOUTUBE_CLIENT_ID or YOUTUBE_CLIENT_ID.startswith('your_'): missing.append('YOUTUBE_CLIENT_ID')
+        if not YOUTUBE_CLIENT_SECRET or YOUTUBE_CLIENT_SECRET.startswith('your_'): missing.append('YOUTUBE_CLIENT_SECRET')
+        if not YOUTUBE_REDIRECT_URI: missing.append('YOUTUBE_REDIRECT_URI')
+    return missing
+
+def check_credentials(platform):
+    return len(get_missing_credentials(platform)) == 0
 
 @app.route('/')
 def index():
     error = request.args.get('error')
+    
+    # Check for .env file existence
+    env_exists = os.path.exists('.env')
+    
     return render_template('index.html',
                            twitch_logged_in='twitch_token' in session,
                            youtube_logged_in='youtube_token' in session,
                            twitch_key=session.get('twitch_key'),
                            youtube_key=session.get('youtube_key'),
-                           error=error)
+                           error=error,
+                           env_exists=env_exists,
+                           twitch_missing=get_missing_credentials('twitch'),
+                           youtube_missing=get_missing_credentials('youtube'))
 
 @app.route('/overlay')
 def overlay():
