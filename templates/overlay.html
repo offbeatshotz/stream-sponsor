@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Overlay</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: transparent;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+        }
+
+        #overlay-container {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .widget {
+            background: rgba(0, 0, 0, 0.7);
+            border-left: 5px solid #6441a5; /* Twitch Purple */
+            padding: 10px 20px;
+            border-radius: 0 10px 10px 0;
+            animation: slideIn 0.5s ease-out;
+            min-width: 200px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .widget.youtube {
+            border-left-color: #ff0000; /* YouTube Red */
+        }
+
+        .label {
+            font-size: 12px;
+            text-transform: uppercase;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        #status-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            background: #44ff44;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #44ff44;
+        }
+    </style>
+</head>
+<body>
+    <div id="status-indicator">
+        <div class="dot"></div>
+        <span>LIVE</span>
+    </div>
+
+    <div id="overlay-container">
+        <div class="widget" id="twitch-widget">
+            <div class="label">Twitch Stream</div>
+            <div class="value" id="twitch-status">Connecting...</div>
+        </div>
+        <div class="widget youtube" id="youtube-widget">
+            <div class="label">YouTube Stream</div>
+            <div class="value" id="youtube-status">Connecting...</div>
+        </div>
+    </div>
+
+    <script>
+        // In a real scenario, this would connect to the Python backend via WebSockets or polling
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('twitch-status').textContent = data.twitch || 'Offline';
+                    document.getElementById('youtube-status').textContent = data.youtube || 'Offline';
+                })
+                .catch(err => console.error('Error fetching status:', err));
+        }
+
+        // Poll every 5 seconds
+        setInterval(updateStatus, 5000);
+        updateStatus();
+    </script>
+</body>
+</html>

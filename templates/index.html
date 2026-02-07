@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Manager Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card { margin-top: 20px; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); }
+        .stream-key { font-family: monospace; background: #eee; padding: 5px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Stream Overlay Generator (Lightstream Ready)</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row mt-3">
+            <div class="col-12 text-end">
+                <button class="btn btn-success" onclick="exportProfile()">Export Stream Profile</button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-purple text-white" style="background-color: #6441a5;">
+                        Twitch Integration
+                    </div>
+                    <div class="card-body">
+                        {% if twitch_logged_in %}
+                            <p>Status: <span class="badge bg-success">Connected</span></p>
+                            <p>Stream Key: <span class="stream-key">{{ twitch_key or 'Hidden' }}</span></p>
+                            <button class="btn btn-outline-primary btn-sm" onclick="copyKey('{{ twitch_key }}')">Copy Key</button>
+                        {% else %}
+                            <a href="/login/twitch" class="btn btn-primary">Login with Twitch</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-danger text-white">
+                        YouTube Integration
+                    </div>
+                    <div class="card-body">
+                        {% if youtube_logged_in %}
+                            <p>Status: <span class="badge bg-success">Connected</span></p>
+                            <p>Stream Key: <span class="stream-key">{{ youtube_key or 'Hidden' }}</span></p>
+                            <button class="btn btn-outline-primary btn-sm" onclick="copyKey('{{ youtube_key }}')">Copy Key</button>
+                        {% else %}
+                            <a href="/login/youtube" class="btn btn-danger">Login with YouTube</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        Lightstream Overlay Preview
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="alert alert-warning">
+                            <strong>Note for Lightstream:</strong> Use your <b>ngrok URL</b> for the Browser Source instead of localhost.
+                        </div>
+                        <p>Local URL: <code>http://localhost:5000/overlay</code></p>
+                        <iframe src="/overlay" width="800" height="450" style="border: 1px solid #ddd; background: #333;"></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function copyKey(key) {
+            navigator.clipboard.writeText(key);
+            alert('Stream key copied to clipboard!');
+        }
+
+        function exportProfile() {
+            fetch('/export')
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                })
+                .catch(err => alert('Error exporting profile: ' + err));
+        }
+    </script>
+</body>
+</html>
