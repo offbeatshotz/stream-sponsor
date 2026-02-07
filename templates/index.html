@@ -68,8 +68,18 @@
                             <p>Status: <span class="badge bg-success">Connected</span></p>
                             <p>Stream Key: <span class="stream-key">{{ twitch_key or 'Hidden' }}</span></p>
                             <button class="btn btn-outline-primary btn-sm" onclick="copyKey('{{ twitch_key }}')">Copy Key</button>
+                            <a href="/login/twitch" class="btn btn-link btn-sm">Re-authenticate</a>
                         {% else %}
-                            <a href="/login/twitch" class="btn btn-primary mb-2">Login with Twitch</a>
+                            <form action="/manual-save" method="POST" class="mb-3">
+                                <input type="hidden" name="platform" value="twitch">
+                                <div class="mb-2">
+                                    <label class="small fw-bold">Twitch Stream Key</label>
+                                    <input type="password" name="key" class="form-control form-control-sm" placeholder="Paste stream key here" required>
+                                </div>
+                                <button type="submit" class="btn btn-dark btn-sm w-100">Save Manually</button>
+                            </form>
+                            <div class="text-center small text-muted mb-2">OR</div>
+                            <a href="/login/twitch" class="btn btn-primary btn-sm w-100 mb-2">Login with Twitch (OAuth)</a>
                             <div class="mt-2 small text-muted">
                                 <strong>Redirect URI for Console:</strong><br>
                                 <code>{{ twitch_redirect }}</code>
@@ -89,8 +99,18 @@
                             <p>Status: <span class="badge bg-success">Connected</span></p>
                             <p>Stream Key: <span class="stream-key">{{ youtube_key or 'Hidden' }}</span></p>
                             <button class="btn btn-outline-primary btn-sm" onclick="copyKey('{{ youtube_key }}')">Copy Key</button>
+                            <a href="/login/youtube" class="btn btn-link btn-sm">Re-authenticate</a>
                         {% else %}
-                            <a href="/login/youtube" class="btn btn-danger mb-2">Login with YouTube</a>
+                            <form action="/manual-save" method="POST" class="mb-3">
+                                <input type="hidden" name="platform" value="youtube">
+                                <div class="mb-2">
+                                    <label class="small fw-bold">YouTube Stream Key</label>
+                                    <input type="password" name="key" class="form-control form-control-sm" placeholder="Paste stream key here" required>
+                                </div>
+                                <button type="submit" class="btn btn-dark btn-sm w-100">Save Manually</button>
+                            </form>
+                            <div class="text-center small text-muted mb-2">OR</div>
+                            <a href="/login/youtube" class="btn btn-danger btn-sm w-100 mb-2">Login with YouTube (OAuth)</a>
                             <div class="mt-2 small text-muted">
                                 <strong>Redirect URI for Console:</strong><br>
                                 <code>{{ youtube_redirect }}</code>

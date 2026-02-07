@@ -34,8 +34,8 @@ A Python-based tool to generate dynamic stream overlays and automatically retrie
 4. **IMPORTANT**: Copy the **Client ID** and **Client Secret**. If you get a **401: invalid_client** error, it means the Client ID in your `.env` is incorrect.
 
 ## Usage
-1. **Login**: Click "Login with Twitch" or "Login with YouTube" to authorize the app.
-2. **Stream Keys**: Once authorized, your stream keys will be fetched and displayed.
+1. **Manual Setup (Recommended)**: If you don't want to use OAuth, you can simply paste your Twitch or YouTube stream key directly into the dashboard and click "Save Manually".
+2. **OAuth Login**: Click "Login with Twitch" or "Login with YouTube" to automatically fetch your keys.
 3. **Overlay**: Access the overlay at `http://localhost:5000/overlay`.
 4. **Export**: Click "Export Stream Profile" to save your configuration to `stream_profile.json`.
 

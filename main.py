@@ -82,6 +82,20 @@ def status():
         'youtube': 'Streaming' if session.get('youtube_key') else 'Disconnected'
     })
 
+@app.route('/manual-save', methods=['POST'])
+def manual_save():
+    platform = request.form.get('platform')
+    key = request.form.get('key')
+    
+    if platform == 'twitch':
+        session['twitch_key'] = key
+        session['twitch_token'] = 'manual'
+    elif platform == 'youtube':
+        session['youtube_key'] = key
+        session['youtube_token'] = 'manual'
+        
+    return redirect(url_for('index', message=f"{platform.capitalize()} stream key saved manually!"))
+
 @app.route('/export')
 def export_profile():
     profile = {
