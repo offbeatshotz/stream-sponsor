@@ -1,0 +1,5 @@
+requests==2.31.0
+colorama==0.4.6
+flask==3.0.0
+flask-cors==4.0.0
+pyngrok==7.1.2
