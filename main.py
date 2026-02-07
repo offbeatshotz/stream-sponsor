@@ -42,7 +42,12 @@ def get_redirect_uri(platform):
     return f"{base_url}{path}"
 
 def check_credentials(platform):
-    return True # Allow attempting login regardless of .env state
+    """Checks if the credentials in .env are actual keys and not placeholders."""
+    if platform == 'twitch':
+        return TWITCH_CLIENT_ID and not TWITCH_CLIENT_ID.startswith('your_')
+    if platform == 'youtube':
+        return YOUTUBE_CLIENT_ID and not YOUTUBE_CLIENT_ID.startswith('your_')
+    return False
 
 @app.route('/')
 def index():
@@ -95,7 +100,7 @@ def export_profile():
 @app.route('/login/twitch')
 def login_twitch():
     if not check_credentials('twitch'):
-        return redirect(url_for('index', error="Twitch credentials missing or invalid in .env"))
+        return redirect(url_for('index', error="Twitch Client ID is missing or still set to the placeholder in your .env file. Please add your real Client ID from the Twitch Developer Console."))
     
     redirect_uri = get_redirect_uri('twitch')
     params = {
@@ -156,7 +161,7 @@ def callback_twitch():
 @app.route('/login/youtube')
 def login_youtube():
     if not check_credentials('youtube'):
-        return redirect(url_for('index', error="YouTube credentials missing or invalid in .env"))
+        return redirect(url_for('index', error="YouTube Client ID is missing or still set to the placeholder in your .env file. Please add your real Client ID from the Google Cloud Console."))
 
     try:
         redirect_uri = get_redirect_uri('youtube')

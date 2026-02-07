@@ -24,14 +24,14 @@ A Python-based tool to generate dynamic stream overlays and automatically retrie
 ### Twitch
 1. Go to the [Twitch Developer Console](https://dev.twitch.tv/console).
 2. Register a new application.
-3. Set the Redirect URI to `http://localhost:5000/callback/twitch` (or your ngrok URL). **IMPORTANT: This must match your `.env` file exactly.**
-4. Copy the Client ID and Secret to your `.env` file.
+3. Set the Redirect URI to the one shown on your dashboard (e.g., `http://localhost:5000/callback/twitch`).
+4. **IMPORTANT**: Copy the **Client ID** and **Client Secret**. If you get a **401: invalid_client** error, it means the Client ID in your `.env` is incorrect.
 
 ### YouTube
 1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
 2. Create a project and enable the "YouTube Data API v3".
-3. Create OAuth 2.0 credentials and set the Redirect URI to `http://localhost:5000/callback/youtube` (or your ngrok URL). **IMPORTANT: This must match your `.env` file exactly.**
-4. Copy the Client ID and Secret to your `.env` file.
+3. Create OAuth 2.0 credentials and set the Redirect URI to the one shown on your dashboard (e.g., `http://localhost:5000/callback/youtube`).
+4. **IMPORTANT**: Copy the **Client ID** and **Client Secret**. If you get a **401: invalid_client** error, it means the Client ID in your `.env` is incorrect.
 
 ## Usage
 1. **Login**: Click "Login with Twitch" or "Login with YouTube" to authorize the app.
