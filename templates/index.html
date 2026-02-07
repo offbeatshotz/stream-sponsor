@@ -19,6 +19,17 @@
     </nav>
 
     <div class="container">
+        {% if is_public %}
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <strong>Public Access Enabled:</strong> Your dashboard and overlay are accessible at:<br>
+                    <a href="{{ current_url }}" target="_blank" class="alert-link">{{ current_url }}</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         {% if message %}
         <div class="row mt-3">
             <div class="col-12">
@@ -98,9 +109,9 @@
                     </div>
                     <div class="card-body text-center">
                         <div class="alert alert-warning">
-                            <strong>Note for Lightstream:</strong> Use your <b>ngrok URL</b> for the Browser Source instead of localhost.
+                            <strong>Note for Lightstream:</strong> Use the <b>Public URL</b> below for your Browser Source.
                         </div>
-                        <p>Local URL: <code>http://localhost:5000/overlay</code></p>
+                        <p>Overlay URL: <code>{{ current_url }}/overlay</code></p>
                         <iframe src="/overlay" width="800" height="450" style="border: 1px solid #ddd; background: #333;"></iframe>
                     </div>
                 </div>

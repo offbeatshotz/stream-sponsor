@@ -54,6 +54,10 @@ def index():
     error = request.args.get('error')
     message = request.args.get('message')
     
+    # Get the current base URL (handles ngrok automatically)
+    current_url = request.host_url.rstrip('/')
+    is_public = 'ngrok' in current_url or 'localhost' not in current_url
+    
     return render_template('index.html',
                            twitch_logged_in='twitch_token' in session,
                            youtube_logged_in='youtube_token' in session,
@@ -62,7 +66,9 @@ def index():
                            error=error,
                            message=message,
                            twitch_redirect=get_redirect_uri('twitch'),
-                           youtube_redirect=get_redirect_uri('youtube'))
+                           youtube_redirect=get_redirect_uri('youtube'),
+                           current_url=current_url,
+                           is_public=is_public)
 
 @app.route('/overlay')
 def overlay():
@@ -102,10 +108,7 @@ def export_profile():
 @app.route('/login/twitch')
 def login_twitch():
     if not check_credentials('twitch'):
-        # Fallback to Demo/Mock Mode
-        session['twitch_token'] = 'demo_token'
-        session['twitch_key'] = 'live_demo_user_123456'
-        return redirect(url_for('index', message="Twitch Demo Mode Enabled (No API keys found)"))
+        return redirect(url_for('index', error="Twitch Client ID is missing or invalid in your .env file."))
     
     redirect_uri = get_redirect_uri('twitch')
     params = {
@@ -166,10 +169,7 @@ def callback_twitch():
 @app.route('/login/youtube')
 def login_youtube():
     if not check_credentials('youtube'):
-        # Fallback to Demo/Mock Mode
-        session['youtube_token'] = json.dumps({'access_token': 'demo_token'})
-        session['youtube_key'] = 'demo-stream-key-abcd-1234'
-        return redirect(url_for('index', message="YouTube Demo Mode Enabled (No API keys found)"))
+        return redirect(url_for('index', error="YouTube Client ID is missing or invalid in your .env file."))
 
     try:
         redirect_uri = get_redirect_uri('youtube')
