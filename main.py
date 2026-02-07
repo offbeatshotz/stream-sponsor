@@ -9,6 +9,9 @@ from googleapiclient.discovery import build
 # Load environment variables
 load_dotenv()
 
+# Allow insecure transport for local development (YouTube/Google requirement)
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'default_secret_key')
 
@@ -25,13 +28,22 @@ YOUTUBE_REDIRECT_URI = os.getenv('YOUTUBE_REDIRECT_URI')
 TWITCH_SCOPES = 'channel:read:stream_key'
 YOUTUBE_SCOPES = ['https://www.googleapis.com/auth/youtube.readonly']
 
+def check_credentials(platform):
+    if platform == 'twitch':
+        return TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET and not TWITCH_CLIENT_ID.startswith('your_')
+    if platform == 'youtube':
+        return YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET and not YOUTUBE_CLIENT_ID.startswith('your_')
+    return False
+
 @app.route('/')
 def index():
+    error = request.args.get('error')
     return render_template('index.html',
                            twitch_logged_in='twitch_token' in session,
                            youtube_logged_in='youtube_token' in session,
                            twitch_key=session.get('twitch_key'),
-                           youtube_key=session.get('youtube_key'))
+                           youtube_key=session.get('youtube_key'),
+                           error=error)
 
 @app.route('/overlay')
 def overlay():
@@ -60,14 +72,19 @@ def export_profile():
     }
     
     filename = "stream_profile.json"
-    with open(filename, 'w') as f:
-        json.dump(profile, f, indent=4)
-    
-    return jsonify({"status": "success", "message": f"Profile saved to {filename}", "profile": profile})
+    try:
+        with open(filename, 'w') as f:
+            json.dump(profile, f, indent=4)
+        return jsonify({"status": "success", "message": f"Profile saved to {filename}", "profile": profile})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # --- Twitch OAuth ---
 @app.route('/login/twitch')
 def login_twitch():
+    if not check_credentials('twitch'):
+        return redirect(url_for('index', error="Twitch credentials missing or invalid in .env"))
+    
     auth_url = f"https://id.twitch.tv/oauth2/authorize?client_id={TWITCH_CLIENT_ID}&redirect_uri={TWITCH_REDIRECT_URI}&response_type=code&scope={TWITCH_SCOPES}"
     return redirect(auth_url)
 
@@ -75,87 +92,100 @@ def login_twitch():
 def callback_twitch():
     code = request.args.get('code')
     if not code:
-        return "Error: No code received from Twitch", 400
+        return redirect(url_for('index', error="Twitch login failed: No code received"))
 
-    # Exchange code for token
-    token_url = "https://id.twitch.tv/oauth2/token"
-    data = {
-        'client_id': TWITCH_CLIENT_ID,
-        'client_secret': TWITCH_CLIENT_SECRET,
-        'code': code,
-        'grant_type': 'authorization_code',
-        'redirect_uri': TWITCH_REDIRECT_URI
-    }
-    response = requests.post(token_url, data=data)
-    token_data = response.json()
-    session['twitch_token'] = token_data.get('access_token')
+    try:
+        # Exchange code for token
+        token_url = "https://id.twitch.tv/oauth2/token"
+        data = {
+            'client_id': TWITCH_CLIENT_ID,
+            'client_secret': TWITCH_CLIENT_SECRET,
+            'code': code,
+            'grant_type': 'authorization_code',
+            'redirect_uri': TWITCH_REDIRECT_URI
+        }
+        response = requests.post(token_url, data=data)
+        token_data = response.json()
+        
+        if 'access_token' not in token_data:
+            return redirect(url_for('index', error=f"Twitch token error: {token_data.get('message', 'Unknown error')}"))
 
-    # Fetch Stream Key
-    headers = {
-        'Client-ID': TWITCH_CLIENT_ID,
-        'Authorization': f"Bearer {session['twitch_token']}"
-    }
-    # Get user ID first
-    user_response = requests.get("https://api.twitch.tv/helix/users", headers=headers)
-    user_data = user_response.json()
-    if 'data' in user_data and len(user_data['data']) > 0:
-        user_id = user_data['data'][0]['id']
-        # Note: Getting stream key requires specific permissions or it might be in another endpoint
-        # For simplicity in this demo, we'll store the user ID or a placeholder
-        session['twitch_key'] = f"live_{user_id}_xxxxxx" # Actual key retrieval depends on specific API access
+        session['twitch_token'] = token_data.get('access_token')
 
-    return redirect(url_for('index'))
+        # Fetch Stream Key
+        headers = {
+            'Client-ID': TWITCH_CLIENT_ID,
+            'Authorization': f"Bearer {session['twitch_token']}"
+        }
+        user_response = requests.get("https://api.twitch.tv/helix/users", headers=headers)
+        user_data = user_response.json()
+        
+        if 'data' in user_data and len(user_data['data']) > 0:
+            user_id = user_data['data'][0]['id']
+            session['twitch_key'] = f"live_{user_id}_xxxxxx" 
+        
+        return redirect(url_for('index'))
+    except Exception as e:
+        return redirect(url_for('index', error=f"Twitch callback error: {str(e)}"))
 
 # --- YouTube OAuth ---
 @app.route('/login/youtube')
 def login_youtube():
-    flow = Flow.from_client_config(
-        {
-            "web": {
-                "client_id": YOUTUBE_CLIENT_ID,
-                "client_secret": YOUTUBE_CLIENT_SECRET,
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [YOUTUBE_REDIRECT_URI]
-            }
-        },
-        scopes=YOUTUBE_SCOPES
-    )
-    flow.redirect_uri = YOUTUBE_REDIRECT_URI
-    authorization_url, state = flow.authorization_url(access_type='offline', include_granted_scopes='true')
-    session['youtube_state'] = state
-    return redirect(authorization_url)
+    if not check_credentials('youtube'):
+        return redirect(url_for('index', error="YouTube credentials missing or invalid in .env"))
+
+    try:
+        flow = Flow.from_client_config(
+            {
+                "web": {
+                    "client_id": YOUTUBE_CLIENT_ID,
+                    "client_secret": YOUTUBE_CLIENT_SECRET,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": [YOUTUBE_REDIRECT_URI]
+                }
+            },
+            scopes=YOUTUBE_SCOPES
+        )
+        flow.redirect_uri = YOUTUBE_REDIRECT_URI
+        authorization_url, state = flow.authorization_url(access_type='offline', include_granted_scopes='true')
+        session['youtube_state'] = state
+        return redirect(authorization_url)
+    except Exception as e:
+        return redirect(url_for('index', error=f"YouTube login error: {str(e)}"))
 
 @app.route('/callback/youtube')
 def callback_youtube():
-    flow = Flow.from_client_config(
-        {
-            "web": {
-                "client_id": YOUTUBE_CLIENT_ID,
-                "client_secret": YOUTUBE_CLIENT_SECRET,
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [YOUTUBE_REDIRECT_URI]
-            }
-        },
-        scopes=YOUTUBE_SCOPES,
-        state=session.get('youtube_state')
-    )
-    flow.redirect_uri = YOUTUBE_REDIRECT_URI
-    flow.fetch_token(authorization_response=request.url)
-    credentials = flow.credentials
-    session['youtube_token'] = credentials.to_json()
+    try:
+        flow = Flow.from_client_config(
+            {
+                "web": {
+                    "client_id": YOUTUBE_CLIENT_ID,
+                    "client_secret": YOUTUBE_CLIENT_SECRET,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": [YOUTUBE_REDIRECT_URI]
+                }
+            },
+            scopes=YOUTUBE_SCOPES,
+            state=session.get('youtube_state')
+        )
+        flow.redirect_uri = YOUTUBE_REDIRECT_URI
+        flow.fetch_token(authorization_response=request.url)
+        credentials = flow.credentials
+        session['youtube_token'] = credentials.to_json()
 
-    # Fetch Stream Key using YouTube Live API
-    youtube = build('youtube', 'v3', credentials=credentials)
-    request_streams = youtube.liveStreams().list(part="cdn", mine=True)
-    response = request_streams.execute()
-    
-    if 'items' in response and len(response['items']) > 0:
-        stream_key = response['items'][0]['cdn']['ingestionInfo']['streamName']
-        session['youtube_key'] = stream_key
+        youtube = build('youtube', 'v3', credentials=credentials)
+        request_streams = youtube.liveStreams().list(part="cdn", mine=True)
+        response = request_streams.execute()
+        
+        if 'items' in response and len(response['items']) > 0:
+            stream_key = response['items'][0]['cdn']['ingestionInfo']['streamName']
+            session['youtube_key'] = stream_key
 
-    return redirect(url_for('index'))
+        return redirect(url_for('index'))
+    except Exception as e:
+        return redirect(url_for('index', error=f"YouTube callback error: {str(e)}"))
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
