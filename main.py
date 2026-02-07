@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+import urllib.parse
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from dotenv import load_dotenv
 from google_auth_oauthlib.flow import Flow
@@ -85,12 +86,22 @@ def login_twitch():
     if not check_credentials('twitch'):
         return redirect(url_for('index', error="Twitch credentials missing or invalid in .env"))
     
-    auth_url = f"https://id.twitch.tv/oauth2/authorize?client_id={TWITCH_CLIENT_ID}&redirect_uri={TWITCH_REDIRECT_URI}&response_type=code&scope={TWITCH_SCOPES}"
+    params = {
+        'client_id': TWITCH_CLIENT_ID,
+        'redirect_uri': TWITCH_REDIRECT_URI,
+        'response_type': 'code',
+        'scope': TWITCH_SCOPES
+    }
+    auth_url = f"https://id.twitch.tv/oauth2/authorize?{urllib.parse.urlencode(params)}"
     return redirect(auth_url)
 
 @app.route('/callback/twitch')
 def callback_twitch():
     code = request.args.get('code')
+    error_desc = request.args.get('error_description')
+    
+    if error_desc:
+        return redirect(url_for('index', error=f"Twitch Error: {error_desc}"))
     if not code:
         return redirect(url_for('index', error="Twitch login failed: No code received"))
 
@@ -107,8 +118,8 @@ def callback_twitch():
         response = requests.post(token_url, data=data)
         token_data = response.json()
         
-        if 'access_token' not in token_data:
-            return redirect(url_for('index', error=f"Twitch token error: {token_data.get('message', 'Unknown error')}"))
+        if response.status_code != 200:
+            return redirect(url_for('index', error=f"Twitch Token Error (400): {token_data.get('message', 'Invalid request. Check if Redirect URI in Twitch Console matches .env')}"))
 
         session['twitch_token'] = token_data.get('access_token')
 
@@ -156,6 +167,10 @@ def login_youtube():
 
 @app.route('/callback/youtube')
 def callback_youtube():
+    error = request.args.get('error')
+    if error:
+        return redirect(url_for('index', error=f"YouTube Error: {error}"))
+
     try:
         flow = Flow.from_client_config(
             {
@@ -171,6 +186,8 @@ def callback_youtube():
             state=session.get('youtube_state')
         )
         flow.redirect_uri = YOUTUBE_REDIRECT_URI
+        
+        # Explicitly fetch token using the same redirect URI
         flow.fetch_token(authorization_response=request.url)
         credentials = flow.credentials
         session['youtube_token'] = credentials.to_json()
