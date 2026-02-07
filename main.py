@@ -52,6 +52,7 @@ def check_credentials(platform):
 @app.route('/')
 def index():
     error = request.args.get('error')
+    message = request.args.get('message')
     
     return render_template('index.html',
                            twitch_logged_in='twitch_token' in session,
@@ -59,6 +60,7 @@ def index():
                            twitch_key=session.get('twitch_key'),
                            youtube_key=session.get('youtube_key'),
                            error=error,
+                           message=message,
                            twitch_redirect=get_redirect_uri('twitch'),
                            youtube_redirect=get_redirect_uri('youtube'))
 
@@ -100,7 +102,10 @@ def export_profile():
 @app.route('/login/twitch')
 def login_twitch():
     if not check_credentials('twitch'):
-        return redirect(url_for('index', error="Twitch Client ID is missing or still set to the placeholder in your .env file. Please add your real Client ID from the Twitch Developer Console."))
+        # Fallback to Demo/Mock Mode
+        session['twitch_token'] = 'demo_token'
+        session['twitch_key'] = 'live_demo_user_123456'
+        return redirect(url_for('index', message="Twitch Demo Mode Enabled (No API keys found)"))
     
     redirect_uri = get_redirect_uri('twitch')
     params = {
@@ -161,7 +166,10 @@ def callback_twitch():
 @app.route('/login/youtube')
 def login_youtube():
     if not check_credentials('youtube'):
-        return redirect(url_for('index', error="YouTube Client ID is missing or still set to the placeholder in your .env file. Please add your real Client ID from the Google Cloud Console."))
+        # Fallback to Demo/Mock Mode
+        session['youtube_token'] = json.dumps({'access_token': 'demo_token'})
+        session['youtube_key'] = 'demo-stream-key-abcd-1234'
+        return redirect(url_for('index', message="YouTube Demo Mode Enabled (No API keys found)"))
 
     try:
         redirect_uri = get_redirect_uri('youtube')
