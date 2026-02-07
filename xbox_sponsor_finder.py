@@ -14,22 +14,9 @@ init(autoreset=True)
 # Flask App for Overlay
 app = Flask(__name__)
 CORS(app)
-finder_instance = None
-
-@app.route('/')
-def overlay():
-    return render_template('overlay.html')
-
-@app.route('/api/deals')
-def api_deals():
-    if finder_instance:
-        return jsonify(finder_instance.get_xbox_deals(limit=5))
-    return jsonify([])
 
 class XboxSponsorFinder:
     def __init__(self):
-        global finder_instance
-        finder_instance = self
         self.cheapshark_url = "https://www.cheapshark.com/api/1.0/deals"
         self.server_thread = None
         self.public_url = None
@@ -198,16 +185,18 @@ class XboxSponsorFinder:
             else:
                 print(f"{Fore.RED}Invalid selection. Try again.")
 
-if __name__ == "__main__":
-    finder = XboxSponsorFinder()
-    try:
-        finder.main()
-    except KeyboardInterrupt:
-        print(f"\n{Fore.GREEN}Exiting...")
-        sys.exit()
+# Global instance for Vercel and routes
+finder = XboxSponsorFinder()
+
+@app.route('/')
+def overlay():
+    return render_template('overlay.html')
+
+@app.route('/api/deals')
+def api_deals():
+    return jsonify(finder.get_xbox_deals(limit=5))
 
 if __name__ == "__main__":
-    finder = XboxSponsorFinder()
     try:
         finder.main()
     except KeyboardInterrupt:
