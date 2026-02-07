@@ -1,65 +1,68 @@
-# Stream Overlay Generator & Key Manager
+# Stream Overlay Generator (Encrypted)
 
-A Python-based tool to generate dynamic stream overlays and automatically retrieve stream keys from Twitch and YouTube.
+This Python program generates dynamic stream overlays for Twitch and YouTube. The overlay configuration (username, sponsor, colors, etc.) is encrypted using the stream key, ensuring that the overlay data is tied to the streamer's unique key.
 
 ## Features
-- **OAuth Integration**: Securely connect to Twitch and YouTube.
-- **Stream Key Retrieval**: Automatically fetch your current stream key/URL.
-- **Overlay Generator**: Create customizable HTML/JS overlays for your stream.
-- **Local Server**: Hosted locally for easy integration with OBS/Streamlabs.
 
-## Setup
-1. Clone the repository.
+- **Encryption**: Uses AES-256 (Fernet) to encrypt overlay data.
+- **Dynamic Content**: Easily change username, platform, and sponsor.
+- **OBS Ready**: Generates a URL that can be added directly to OBS as a Browser Source.
+- **Customizable**: simple HTML/CSS template for easy styling.
+
+## Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/sponsor-for-stream.git
+   cd sponsor-for-stream
+   ```
+
 2. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-3. Copy `.env.example` to `.env` and fill in your API credentials.
-4. Run the application:
-   ```bash
-   python main.py
-   ```
-
-## API Setup
-### Twitch
-1. Go to the [Twitch Developer Console](https://dev.twitch.tv/console).
-2. Register a new application.
-3. Set the Redirect URI to the one shown on your dashboard (e.g., `http://localhost:5000/callback/twitch`).
-4. **IMPORTANT**: Copy the **Client ID** and **Client Secret**. If you get a **401: invalid_client** error, it means the Client ID in your `.env` is incorrect.
-
-### YouTube
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
-2. Create a project and enable the "YouTube Data API v3".
-3. Create OAuth 2.0 credentials and set the Redirect URI to the one shown on your dashboard (e.g., `http://localhost:5000/callback/youtube`).
-4. **IMPORTANT**: Copy the **Client ID** and **Client Secret**. If you get a **401: invalid_client** error, it means the Client ID in your `.env` is incorrect.
 
 ## Usage
-1. **Manual Setup (Recommended)**: If you don't want to use OAuth, you can simply paste your Twitch or YouTube stream key directly into the dashboard and click "Save Manually".
-2. **OAuth Login**: Click "Login with Twitch" or "Login with YouTube" to automatically fetch your keys.
-3. **Overlay**: Access the overlay at `http://localhost:5000/overlay`.
-4. **Export**: Click "Export Stream Profile" to save your configuration to `stream_profile.json`.
 
-## Integrating with Lightstream
-Since Lightstream is a cloud-based studio, it cannot access `localhost` directly. You must make your local server publicly accessible using a tool like **ngrok**.
+### 1. Start the Overlay Server
 
-### 1. Make your overlay public with ngrok
-1. Download [ngrok](https://ngrok.com/).
-2. Run your Python app: `python main.py`.
-3. In a new terminal, run:
-   ```bash
-   ngrok http 5000
-   ```
-4. Copy the "Forwarding" URL (e.g., `https://xxxx-xxxx.ngrok-free.app`). Your overlay URL for Lightstream will be `https://xxxx-xxxx.ngrok-free.app/overlay`.
+The server handles the decryption and rendering of the overlay.
 
-### 2. Add to Lightstream
-1. Open your [Lightstream Studio](https://studio.golightstream.com/).
-2. Click the **"+" (Add Layer)** button.
-3. Select **"3rd Party Integration"** or **"External Asset"** -> **"Browser Source"**.
-4. Paste your ngrok Overlay URL.
-5. Set the resolution to match your canvas (e.g., 1280x720 or 1920x1080).
+```bash
+python app.py
+```
+
+By default, it runs on `http://localhost:5000`.
+
+### 2. Generate an Overlay URL
+
+Use the `generator.py` script to create your unique, encrypted overlay URL.
+
+```bash
+python generator.py --key YOUR_STREAM_KEY --username "MyStreamerName" --platform "Twitch" --sponsor "CoolSponsor" --color "#00ff00"
+```
+
+Replace `YOUR_STREAM_KEY` with your actual Twitch or YouTube stream key (or any secret string).
+
+### 3. Add to OBS
+
+1. Copy the generated `Overlay URL`.
+2. In OBS, add a new **Browser Source**.
+3. Paste the URL into the **URL** field.
+4. Set the width and height (e.g., 1920x1080) and check "Shutdown source when not visible".
 
 ## Project Structure
-- `main.py`: Flask application handling OAuth and API calls.
-- `templates/`: HTML templates for the dashboard and overlay.
-- `requirements.txt`: Python dependencies.
-- `.env`: (You create this) Stores your API credentials.
+
+- `app.py`: The Flask web server.
+- `utils.py`: Encryption and decryption logic.
+- `generator.py`: CLI tool for generating encrypted URLs.
+- `templates/`: HTML templates for the overlays.
+- `static/`: Placeholder for CSS/JS files.
+
+## Security Note
+
+This tool uses your stream key as an encryption key. While this ties the overlay to your stream, **be careful not to share the generated URL publicly**, as it contains your stream key in the query parameters. In a production environment, you should use a backend database to map encrypted IDs to stream keys instead of passing the key in the URL.
+
+## License
+
+MIT
