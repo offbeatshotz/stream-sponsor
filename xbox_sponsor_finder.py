@@ -20,9 +20,16 @@ class XboxSponsorFinder:
         self.cheapshark_url = "https://www.cheapshark.com/api/1.0/deals"
         self.server_thread = None
         self.public_url = None
+        self.xsolla_partner_code = os.getenv("XSOLLA_PARTNER_CODE", "XPN_CREATOR") # Default code
         
         # Curated list of platforms that are "Instant Entry" or have public bounties
         self.instant_platforms = [
+            {
+                "name": "Xsolla Partner Network (XPN)",
+                "benefit": "Get paid for playing games with trackable x.la/xpn links.",
+                "link": "https://x.la/xpn/",
+                "type": "XPN Sponsorship"
+            },
             {
                 "name": "Lightstream Studio",
                 "benefit": "Add overlays to Xbox streams without a PC/Capture Card.",
@@ -46,17 +53,17 @@ class XboxSponsorFinder:
                 "benefit": "Public board for game keys and paid bounties.",
                 "link": "https://www.lurkit.com/quests",
                 "type": "Bounty"
-            },
-            {
-                "name": "Instant Gaming Affiliate",
-                "benefit": "Get paid for every game sale generated from your link.",
-                "link": "https://www.instant-gaming.com/en/affiliate/",
-                "type": "Affiliate"
             }
         ]
 
+    def get_xpn_url(self, title):
+        """Generates a clean XPN-style shortlink for the overlay."""
+        # Clean title for SKU-style URL
+        sku = "".join(filter(str.isalnum, title)).upper()[:10]
+        return f"x.la/xpn/{self.xsolla_partner_code}/{sku}"
+
     def get_xbox_deals(self, limit=5):
-        """Fetches current Xbox deals from all tracked stores via CheapShark API."""
+        """Fetches current Xbox deals and attaches XPN shortlinks."""
         params = {
             "upperPrice": 60,
             "pageSize": limit,
@@ -66,7 +73,10 @@ class XboxSponsorFinder:
         try:
             response = requests.get(self.cheapshark_url, params=params, timeout=10)
             if response.status_code == 200:
-                return response.json()
+                deals = response.json()
+                for deal in deals:
+                    deal['xpn_url'] = self.get_xpn_url(deal['title'])
+                return deals
             else:
                 return []
         except Exception:
