@@ -29,6 +29,18 @@ YOUTUBE_REDIRECT_URI = os.getenv('YOUTUBE_REDIRECT_URI')
 TWITCH_SCOPES = 'channel:read:stream_key'
 YOUTUBE_SCOPES = ['https://www.googleapis.com/auth/youtube.readonly']
 
+def get_redirect_uri(platform):
+    """Dynamically determine the redirect URI based on the current request host."""
+    # If the URI in .env is already configured (not default), use it
+    configured_uri = TWITCH_REDIRECT_URI if platform == 'twitch' else YOUTUBE_REDIRECT_URI
+    if configured_uri and not configured_uri.startswith('your_') and 'localhost' not in configured_uri:
+        return configured_uri
+
+    # Otherwise, build it from the current request's host (handles ngrok automatically)
+    base_url = request.host_url.rstrip('/')
+    path = f"/callback/{platform}"
+    return f"{base_url}{path}"
+
 def check_credentials(platform):
     return True # Allow attempting login regardless of .env state
 
@@ -41,7 +53,9 @@ def index():
                            youtube_logged_in='youtube_token' in session,
                            twitch_key=session.get('twitch_key'),
                            youtube_key=session.get('youtube_key'),
-                           error=error)
+                           error=error,
+                           twitch_redirect=get_redirect_uri('twitch'),
+                           youtube_redirect=get_redirect_uri('youtube'))
 
 @app.route('/overlay')
 def overlay():
@@ -83,9 +97,10 @@ def login_twitch():
     if not check_credentials('twitch'):
         return redirect(url_for('index', error="Twitch credentials missing or invalid in .env"))
     
+    redirect_uri = get_redirect_uri('twitch')
     params = {
         'client_id': TWITCH_CLIENT_ID,
-        'redirect_uri': TWITCH_REDIRECT_URI,
+        'redirect_uri': redirect_uri,
         'response_type': 'code',
         'scope': TWITCH_SCOPES
     }
@@ -103,6 +118,7 @@ def callback_twitch():
         return redirect(url_for('index', error="Twitch login failed: No code received"))
 
     try:
+        redirect_uri = get_redirect_uri('twitch')
         # Exchange code for token
         token_url = "https://id.twitch.tv/oauth2/token"
         data = {
@@ -110,13 +126,13 @@ def callback_twitch():
             'client_secret': TWITCH_CLIENT_SECRET,
             'code': code,
             'grant_type': 'authorization_code',
-            'redirect_uri': TWITCH_REDIRECT_URI
+            'redirect_uri': redirect_uri
         }
         response = requests.post(token_url, data=data)
         token_data = response.json()
         
         if response.status_code != 200:
-            return redirect(url_for('index', error=f"Twitch Token Error (400): {token_data.get('message', 'Invalid request. Check if Redirect URI in Twitch Console matches .env')}"))
+            return redirect(url_for('index', error=f"Twitch Token Error ({response.status_code}): {token_data.get('message', 'Invalid request. Ensure the Redirect URI in Twitch Console matches the one below.')}"))
 
         session['twitch_token'] = token_data.get('access_token')
 
@@ -143,6 +159,7 @@ def login_youtube():
         return redirect(url_for('index', error="YouTube credentials missing or invalid in .env"))
 
     try:
+        redirect_uri = get_redirect_uri('youtube')
         flow = Flow.from_client_config(
             {
                 "web": {
@@ -150,12 +167,12 @@ def login_youtube():
                     "client_secret": YOUTUBE_CLIENT_SECRET,
                     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                     "token_uri": "https://oauth2.googleapis.com/token",
-                    "redirect_uris": [YOUTUBE_REDIRECT_URI]
+                    "redirect_uris": [redirect_uri]
                 }
             },
             scopes=YOUTUBE_SCOPES
         )
-        flow.redirect_uri = YOUTUBE_REDIRECT_URI
+        flow.redirect_uri = redirect_uri
         authorization_url, state = flow.authorization_url(access_type='offline', include_granted_scopes='true')
         session['youtube_state'] = state
         return redirect(authorization_url)
@@ -169,6 +186,7 @@ def callback_youtube():
         return redirect(url_for('index', error=f"YouTube Error: {error}"))
 
     try:
+        redirect_uri = get_redirect_uri('youtube')
         flow = Flow.from_client_config(
             {
                 "web": {
@@ -176,13 +194,13 @@ def callback_youtube():
                     "client_secret": YOUTUBE_CLIENT_SECRET,
                     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                     "token_uri": "https://oauth2.googleapis.com/token",
-                    "redirect_uris": [YOUTUBE_REDIRECT_URI]
+                    "redirect_uris": [redirect_uri]
                 }
             },
             scopes=YOUTUBE_SCOPES,
             state=session.get('youtube_state')
         )
-        flow.redirect_uri = YOUTUBE_REDIRECT_URI
+        flow.redirect_uri = redirect_uri
         
         # Explicitly fetch token using the same redirect URI
         flow.fetch_token(authorization_response=request.url)

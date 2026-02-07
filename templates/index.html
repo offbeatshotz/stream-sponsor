@@ -47,7 +47,11 @@
                             <p>Stream Key: <span class="stream-key">{{ twitch_key or 'Hidden' }}</span></p>
                             <button class="btn btn-outline-primary btn-sm" onclick="copyKey('{{ twitch_key }}')">Copy Key</button>
                         {% else %}
-                            <a href="/login/twitch" class="btn btn-primary">Login with Twitch</a>
+                            <a href="/login/twitch" class="btn btn-primary mb-2">Login with Twitch</a>
+                            <div class="mt-2 small text-muted">
+                                <strong>Redirect URI for Console:</strong><br>
+                                <code>{{ twitch_redirect }}</code>
+                            </div>
                         {% endif %}
                     </div>
                 </div>
@@ -64,7 +68,11 @@
                             <p>Stream Key: <span class="stream-key">{{ youtube_key or 'Hidden' }}</span></p>
                             <button class="btn btn-outline-primary btn-sm" onclick="copyKey('{{ youtube_key }}')">Copy Key</button>
                         {% else %}
-                            <a href="/login/youtube" class="btn btn-danger">Login with YouTube</a>
+                            <a href="/login/youtube" class="btn btn-danger mb-2">Login with YouTube</a>
+                            <div class="mt-2 small text-muted">
+                                <strong>Redirect URI for Console:</strong><br>
+                                <code>{{ youtube_redirect }}</code>
+                            </div>
                         {% endif %}
                     </div>
                 </div>
